@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.I.J. - Terminal de Feiticeiros</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --panel: #0a0a0a;
+            --accent: #00f2ff;
+            --danger: #ff0033;
+            --warning: #ffaa00;
+            --text: #ffffff;
+            --border: #1a1a1a;
+        }
+
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+
+        /* NAVEGAÇÃO */
+        nav { display: flex; justify-content: center; background: #000; border-bottom: 2px solid var(--danger); padding: 15px 0; position: sticky; top: 0; z-index: 1000; }
+        nav button { background: transparent; border: none; color: #888; padding: 10px 25px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+        nav button.active { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+
+        .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 20px;
+        position: relative;
+        min-height: 80vh; /* Garante espaço para o conteúdo */
+    }
+        .panel {
+        display: none; 
+        width: 100%;
+    }
+        .panel.active {
+        display: block; /* Apenas o painel ativo aparece */
+    }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* RECRUTAMENTO */
+        .form-box { background: var(--panel); border: 1px solid var(--border); padding: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .full { grid-column: span 2; }
+        label { color: var(--accent); font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        input, select, textarea { width: 100%; background: #111; border: 1px solid #333; color: white; padding: 15px; box-sizing: border-box; }
+        .attr-row { display: flex; justify-content: space-between; background: #000; padding: 20px; border: 1px solid var(--danger); }
+        .attr-in input { width: 60px; text-align: center; font-size: 1.5rem; color: var(--danger); background: transparent; border: 1px solid var(--danger); }
+
+        /* TÉCNICAS */
+        .tech-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    max-height: 300px; /* Limita a altura e adiciona scroll para não esticar o site */
+    overflow-y: auto;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #222;
+}
+
+.tech-btn {
+    font-size: 0.75rem !important;
+    padding: 10px !important;
+    border-radius: 2px;
+    background: #111;
+    border: 1px solid #333;
+    color: #888;
+    text-transform: uppercase;
+}
+
+        .tech-btn.selected { background: var(--accent); color: #000; font-weight: bold; border-color: #fff; }
+        .tech-info-panel { background: rgba(0, 242, 255, 0.05); border-left: 4px solid var(--accent); padding: 20px; margin-top: 10px; display: none; }
+
+        /* CARDS */
+        .agentes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .agente-card { background: var(--panel); border: 1px solid var(--border); padding: 25px; cursor: pointer; border-left: 4px solid var(--accent); }
+
+        /* FICHA DETALHADA (MODAL) */
+        .modal-full { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; overflow-y: auto; padding: 40px; box-sizing: border-box; }
+        .ficha-layout { max-width: 1300px; margin: auto; display: grid; grid-template-columns: 350px 1fr 300px; gap: 40px; }
+
+        /* ATRIBUTOS CLICÁVEIS */
+        .attr-circle { width: 260px; height: 260px; border: 2px dashed #333; border-radius: 50%; position: relative; margin: 50px auto; display: flex; align-items: center; justify-content: center; }
+        .attr-node { position: absolute; width: 55px; height: 55px; background: #000; border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; cursor: pointer; transition: 0.2s; }
+        .attr-node:hover { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); }
+        .n-for { top: -25px; } .n-agi { top: 50px; right: -25px; } .n-int { bottom: 50px; right: -25px; } .n-pre { bottom: 50px; left: -25px; } .n-vig { top: 50px; left: -25px; }
+
+        /* BARRAS EDITÁVEIS */
+        .bar-wrap { background: #111; height: 25px; border: 1px solid #333; margin: 10px 0; position: relative; cursor: pointer; overflow: hidden; }
+        .bar-fill { position: absolute; height: 100%; transition: 0.3s; z-index: 1; }
+        .bar-label { position: absolute; width: 100%; text-align: center; line-height: 25px; font-weight: bold; font-size: 0.75rem; z-index: 2; }
+
+        /* PERÍCIAS */
+        .pericia-list { background: #0a0a0a; border: 1px solid #222; padding: 15px; font-size: 0.8rem; max-height: 400px; overflow-y: auto; }
+        .p-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1a1a1a; }
+
+        .btn-acao { background: var(--accent); color: #000; padding: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; margin-top: 10px; }
+        .btn-fechar { background: var(--danger); border: none; color: #fff; padding: 10px 20px; cursor: pointer; float: right; }
+        .bar-wrap {
+            flex-grow: 1;
+            height: 25px;
+            background: #111;
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+            margin: 0 !important; /* Remove margens que podem quebrar o alinhamento */
+        }
+
+            .modal-full {
+        padding: 20px; /* Reduzi um pouco o padding para caber tudo */
+    }
+
+    .ficha-layout {
+        align-items: start;
+    }
+
+    .item-slot, .ritual-slot {
+        transition: 0.2s;
+    }
+
+    .item-slot:hover {
+        border-color: var(--accent) !important;
+    }
+
+    @import url('https://googleapis.com');
+
+#home {
+    
+    min-height: 80vh;
+    display: none; /* O JS muda para flex quando ativo */
+    flex-direction: column;
+    justify-content: center; /* Centraliza verticalmente */
+    align-items: center;     /* Centraliza horizontalmente */
+    text-align: center;
+    width: 100%;
+}
+
+
+/* Efeito de varredura (Scanline) */
+#home::before {
+    content: " ";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+#home.active {
+    display: flex; /* Quando ativo na home, usa flex para centralizar a logo */
+}
+
+.logo-sij {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8rem;
+    margin: 0;
+    letter-spacing: 25px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3), 
+                 0 0 30px var(--accent), 
+                 0 0 60px var(--accent);
+    animation: glitch 3s infinite;
+}
+
+.sub-sij {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-top: -10px;
+}
+
+.status-box {
+    margin-top: 50px;
+    border: 1px solid rgba(0, 242, 255, 0.3);
+    padding: 15px 30px;
+    background: rgba(0,0,0,0.5);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    
+    /* Centraliza os itens dentro da caixa */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    backdrop-filter: blur(5px);
+    width: fit-content; /* Faz a caixa envolver o conteúdo centralizado */
+}
+
+.music-trigger {
+    border: 1px solid var(--danger);
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-left: 10px;
+}
+
+.music-trigger:hover {
+    background: var(--danger);
+    color: white;
+}
+
+@keyframes glitch {
+    0% { transform: skew(0deg); }
+    1% { transform: skew(10deg); opacity: 0.8; }
+    2% { transform: skew(-10deg); opacity: 1; }
+    3% { transform: skew(0deg); }
+}
+@keyframes alarmeCritico {
+    from { box-shadow: 0 0 5px var(--danger); border-color: var(--danger); }
+    to { box-shadow: 0 0 20px var(--danger); border-color: #fff; background: #200; }
+}
+
+
+    </style>
+</head>
+<body>
+
+<nav>
+    <button onclick="showPanel('home')" id="btn-home" class="active">Terminal</button>
+    <button onclick="showPanel('fichas')" id="btn-fichas">Agentes</button>
+    <button onclick="showPanel('novo')" id="btn-novo">+ Recrutar</button>
+    <button onclick="abrirModoMestre()" id="btn-mestre">Monitoramento</button>
+</nav>
+
+<div class="container">
+    <div id="home" class="panel active">
+    <!-- Decoração de cantos -->
+    <div style="position:absolute; top:20px; left:20px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); width:50px; height:50px; opacity:0.3;"></div>
+    <div style="position:absolute; bottom:20px; right:20px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent); width:50px; height:50px; opacity:0.3;"></div>
+
+    <h1 class="logo-sij">S.I.J.</h1>
+    <p class="sub-sij">Sistema de Identificação de Jujutsu</p>
+
+    <div class="status-box">
+        <span>STATUS: ONLINE</span>
+        <span>|</span>
+        <span>AGENTES CONECTADOS: <span id="count-agentes">0</span></span>
+        <span>|</span>
+        <span>MEMBRANA: ESTÁVEL</span>
+        
+        <!-- Áudio integrado na barra -->
+        <div class="music-trigger" onclick="toggleMusica()">
+            AUDIO TRANCE: <span id="music-status">OFF</span>
+        </div>
+    </div>
+    
+    <audio id="bg-music" loop src="https://www.youtube.com/watch?v=aQ3ZIBeLdcE&list=PLIEibbGcfrARrAaNARQmPHAT-HwUa8-d8&index=10"></audio>
+</div>
+
+
+
+    <div id="fichas" class="panel">
+        <div id="lista-agentes" class="agentes-grid"></div>
+    </div>
+    <!-- PAINEL DO MESTRE -->
+<div id="mestre" class="panel">
+    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+    <button onclick="gerarIniciativa()" style="background: var(--warning); color: #000; border: none; padding: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.7rem;">
+        🎲 Rolar Iniciativa Global
+    </button>
+    <button onclick="limparIniciativa()" style="background: none; border: 1px solid #444; color: #888; padding: 10px; cursor: pointer; font-size: 0.7rem;">
+        Limpar Ordem
+    </button>
+</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--danger); padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="margin: 0;">TERMINAL DO MESTRE: MONITORAMENTO DE NEX</h2>
+        <small style="color: var(--accent);">DADOS ATUALIZADOS EM TEMPO REAL</small>
+    </div>
+    
+    <div id="grid-mestre" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+        <!-- Os status dos jogadores aparecerão aqui dinamicamente -->
+    </div>
+</div>
+
+
+    <div id="novo" class="panel">
+        <div class="form-box">
+            <div class="full"><h2 style="color: var(--accent);">NOVO REGISTRO</h2></div>
+            <div><label>Nome</label><input type="text" id="in-nome"></div>
+            <div><label>Grau</label><select id="in-grau"><option>Grau 4</option><option>Grau 3</option><option>Grau 2</option><option>Grau 1</option><option>Grau Especial</option></select></div>
+            <div class="full">
+                <div class="attr-row">
+                    <div class="attr-in"><label>FOR</label><input type="number" id="in-for" value="1"></div>
+                    <div class="attr-in"><label>AGI</label><input type="number" id="in-agi" value="1"></div>
+                    <div class="attr-in"><label>VIG</label><input type="number" id="in-vig" value="1"></div>
+                    <div class="attr-in"><label>INT</label><input type="number" id="in-int" value="1"></div>
+                    <div class="attr-in"><label>PRE</label><input type="number" id="in-pre" value="1"></div>
+                </div>
+            </div>
+            <div class="full">
+                <label>Técnica</label>
+                <div class="tech-selector" id="tech-selector"></div>
+                <div id="tech-info" class="tech-info-panel"><h4 id="tech-title"></h4><p id="tech-desc"></p></div>
+            </div>
+            <div class="full" id="box-dominio" style="display:none;">
+                <label>Expansão de Domínio</label>
+                <input type="text" id="in-dom-nome" placeholder="Nome do Domínio">
+                <textarea id="in-dom-desc" placeholder="Descrição do Domínio..." style="margin-top:10px;"></textarea>
+            </div>
+            <button class="btn-acao full" onclick="salvar()">REGISTRAR</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalFicha" class="modal-full">
+    <button class="btn-fechar" onclick="fecharFicha()">FECHAR</button>
+    <div class="ficha-layout" style="display: grid; grid-template-columns: 320px 1fr 280px 250px; gap: 20px; max-width: 1550px;">
+        <div>
+            <div class="attr-circle">
+                <div class="attr-node n-for" onclick="rolarTeste('FOR')">FOR<br><b id="f-for"></b></div>
+                <div class="attr-node n-agi" onclick="rolarTeste('AGI')">AGI<br><b id="f-agi"></b></div>
+                <div class="attr-node n-int" onclick="rolarTeste('INT')">INT<br><b id="f-int"></b></div>
+                <div class="attr-node n-pre" onclick="rolarTeste('PRE')">PRE<br><b id="f-pre"></b></div>
+                <div class="attr-node n-vig" onclick="rolarTeste('VIG')">VIG<br><b id="f-vig"></b></div>
+            </div>
+            <div style="margin-top: 20px;">
+    <!-- VIDA -->
+    <label>Vida</label>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <button onclick="ajustar('v', -1)" style="background:#111; border:1px solid var(--danger); color:white; cursor:pointer; width:30px;">&lt;</button>
+        <div class="bar-wrap" style="flex-grow:1; margin:0;">
+            <div id="bar-v" class="bar-fill" style="background:var(--danger)"></div>
+            <div class="bar-label" id="txt-v"></div>
+        </div>
+        <button onclick="ajustar('v', 1)" style="background:#111; border:1px solid var(--danger); color:white; cursor:pointer; width:30px;">&gt;</button>
+    </div>
+
+    <!-- ENERGIA -->
+    <label>Energia (PE)</label>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <button onclick="ajustar('e', -1)" style="background:#111; border:1px solid var(--accent); color:white; cursor:pointer; width:30px;">&lt;</button>
+        <div class="bar-wrap" style="flex-grow:1; margin:0;">
+            <div id="bar-p" class="bar-fill" style="background:var(--accent)"></div>
+            <div class="bar-label" id="txt-e"></div>
+        </div>
+        <button onclick="ajustar('e', 1)" style="background:#111; border:1px solid var(--accent); color:white; cursor:pointer; width:30px;">&gt;</button>
+    </div>
+
+    <!-- DOMÍNIO -->
+    <label>Pontos de Domínio (PD)</label>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <button onclick="ajustar('d', -1)" style="background:#111; border:1px solid var(--warning); color:white; cursor:pointer; width:30px;">&lt;</button>
+        <div class="bar-wrap" style="flex-grow:1; margin:0;">
+            <div id="bar-d" class="bar-fill" style="background:var(--warning)"></div>
+            <div class="bar-label" id="txt-d"></div>
+        </div>
+        <button onclick="ajustar('d', 1)" style="background:#111; border:1px solid var(--warning); color:white; cursor:pointer; width:30px;">&gt;</button>
+    </div>
+</div>
+
+        </div>
+        <div>
+            <h1 id="f-nome" style="color:var(--accent); margin:0;"></h1>
+            <p id="f-grau" style="opacity:0.5;"></p>
+            <h3 style="color:var(--accent); border-bottom:1px solid #222;">PERÍCIAS</h3>
+            <div class="pericia-list" id="f-pericias"></div>
+            <div style="background:#0a0a0a; padding:20px; border:1px solid #222; margin-top:20px;">
+                <strong id="f-tec-nome"></strong><p id="f-tec-p" style="font-size:0.9rem; opacity:0.7"></p>
+                <hr style="border:0; border-top:1px solid #333;">
+                <strong style="color:var(--danger)">DOMÍNIO: </strong><span id="f-dom-nome"></span>
+                <p id="f-dom-p" style="font-size:0.85rem; font-style:italic; opacity:0.6"></p>
+            </div>
+        </div>
+        <div>
+            <div style="background:#111; padding:20px; border:1px solid var(--accent); text-align:center;">
+                <label>RESULTADO</label>
+                <div id="res" style="font-size:5rem; color:var(--accent); margin-top:10px;">--</div>
+                <div id="res-log" style="font-size:0.8rem; opacity:0.5"></div>
+            </div>
+                <!-- BOTÃO DE DESCANSO -->
+            <button onclick="descansar()" style="width: 100%; margin-top: 15px; background: #004422; color: #fff; border: 1px solid #00ff88; padding: 10px; cursor: pointer; font-weight: bold;">
+                🛏️ DESCANSAR (REC. STATUS)
+            </button>
+        </div>
+
+        <!-- NOVA COLUNA 4: ITENS & RITUAIS -->
+        <div style="background: #0a0a0a; border-left: 1px solid var(--border); padding: 15px; display: flex; flex-direction: column; gap: 15px;">
+            <h3 style="color: var(--accent); border-bottom: 1px solid #333; font-size: 0.8rem; margin: 0;">ITENS & RITUAIS</h3>
+            
+            <div id="secao-inventario">
+                <label style="font-size: 0.6rem; opacity: 0.5;">FERRAMENTAS AMALDIÇOADAS</label>
+                <div id="itens-container"></div> <!-- Itens dinâmicos aqui -->
+                <button onclick="abrirPromptItem('item')" style="width: 100%; margin-top: 5px; background: none; border: 1px dashed #444; color: #888; cursor: pointer; font-size: 0.7rem;">+ Novo Item</button>
+            </div>
+
+            <div id="secao-rituais" style="margin-top: 15px;">
+                <label style="font-size: 0.6rem; opacity: 0.5;">RITUAIS DISPONÍVEIS</label>
+                <div id="rituais-container"></div> <!-- Rituais dinâmicos aqui -->
+                <button onclick="abrirPromptItem('ritual')" style="width: 100%; margin-top: 5px; background: none; border: 1px dashed #444; color: #888; cursor: pointer; font-size: 0.7rem;">+ Novo Ritual</button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #222; margin: 10px 0;">
+            <button onclick="descansar()" style="background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 10px; cursor: pointer; font-weight: bold; font-size: 0.7rem;">☕ DESCANSO CURTO</button>
+        </div>
+
+        <div style="background:#0a0a0a; padding:15px; border:1px solid var(--warning); margin-top:15px;">
+    <h3 style="color:var(--warning); margin-top:0; font-size:0.8rem;">VOTOS VINCULANTES</h3>
+    <div id="votos-container"></div>
+    <button onclick="fazerVoto()" style="width:100%; background:none; border:1px dashed var(--warning); color:var(--warning); cursor:pointer; font-size:0.7rem; padding:5px;">+ SELAR NOVO VOTO</button>
+</div>
+
+    </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tecnicasData = {
+    // --- ESCOLA DE TOKYO & KYOTO ---
+    "Infinito": "Manipula o espaço a nível atômico. Concede Defesa absoluta e controle gravitacional (Custo: 5 PE/rodada).",
+    "Dez Sombras": "Invoca até 10 shikigamis através de sombras. Inclui o ritual de dominação de Mahoraga.",
+    "Fala Amaldiçoada": "Comanda a realidade com palavras. Alvos sofrem efeitos imediatos, mas usuário recebe dano de recuo.",
+    "Relação de Proporção": "Divide o alvo na proporção 7:3 para criar um ponto fraco crítico (Crítico 18-20).",
+    "Manipulação de Sangue": "Técnica do Clã Kamo. Permite criar projéteis, endurecer o corpo ou controlar temperatura sanguínea.",
+    "Construção": "Materializa objetos físicos do nada. Consome PE massivo para objetos permanentes.",
+    "Bonecos Amaldiçoados": "Cria corpos artificiais com núcleos de alma independentes. O dano é distribuído entre os núcleos.",
+    "Composição de Projeção": "Transforma 1 segundo em 24 quadros de animação. Quem quebra a regra de movimento fica paralisado por 1 rodada.",
+
+    // --- MALDIÇÕES E VILÕES ---
+    "Clivagem e Desmantelar": "Cortes invisíveis de Sukuna. A Clivagem se ajusta à resistência e o Desmantelar corta objetos inanimados.",
+    "Manipulação de Espíritos": "Absorve maldições derrotadas para usá-las como servos. Sem limite de invocações (Custo: 1 PE/maldição).",
+    "Transfiguração Ociosa": "Muda a forma da alma ao toque. Pode curar o usuário ou deformar inimigos instantaneamente.",
+    "Desastre das Chamas": "Invoca o poder vulcânico de Jogo. Gera calor extremo e disparos de magma (4d10 dano).",
+    "Desastre das Plantas": "Controla a flora amaldiçoada. Pode drenar energia amaldiçoada (PE) de quem toca nas raízes.",
+    "Desastre das Marés": "Manipula massas de água e invoca shikigamis marinhos famintos.",
+    "Técnica de Comédia": "Torna real qualquer coisa que o usuário ache engraçada. Poder potencialmente infinito, mas imprevisível.",
+
+    // --- TÉCNICAS RAREAS E MANGÁ ---
+    "Julgamento": "Invoca o Shikigami 'Judgeman'. Pode proibir o uso de técnicas ou armas dentro da barreira.",
+    "Céu Estrelado": "Aplica conceitos de distância astronômica a alvos marcados, criando repulsão ou atração magnética.",
+    "Cópia": "Permite copiar e armazenar técnicas de outros feiticeiros após consumir uma parte deles (Ex: Yuta).",
+    "Canto de Pássaro": "Controla corvos e permite que eles façam votos vinculantes de suicídio para explosões massivas.",
+    "Contrato de Jogo": "Materializa componentes de jogos de azar ou videogames (Ex: Hakari). Concede bônus de sorte imensos.",
+    "Manipulação de Gelo": "Congela alvos instantaneamente em escalas imensas.",
+    
+    // --- TÉCNICAS DE BARREIRA (NOVAS) ---
+    "O Véu (Cortina)": "Cria uma cúpula negra que isola uma área. Pode impedir a entrada ou saída de pessoas específicas.",
+    "Barreira Vazia": "Uma barreira avançada que oculta o interior e altera a percepção espacial de quem entra.",
+    "Domínio Simples": "Uma técnica defensiva 'para os fracos'. Anula a garantia de acerto de qualquer Expansão de Domínio.",
+    "Amplificação de Domínio": "Cria uma fina camada de domínio ao redor do corpo para neutralizar técnicas inatas inimigas.",
+    "Cesto de Vime": "Protótipo do Domínio Simples. Protege contra golpes amaldiçoados básicos dentro de barreiras."
+};
+
+
+
+    const periciasVinculadas = {
+    "Acrobacia": "AGI",
+    "Atletismo": "FOR",
+    "Crime": "AGI",
+    "Diplomacia": "PRE",
+    "Fortitude": "VIG",
+    "Furtividade": "AGI",
+    "Iniciativa": "AGI",
+    "Intimidação": "PRE",
+    "Investigação": "INT",
+    "Luta": "FOR",
+    "Ocultismo": "INT",
+    "Percepção": "PRE",
+    "Pontaria": "AGI",
+    "Reflexos": "AGI",
+    "Vontade": "PRE"
+};
+
+
+    let selecionada = "", agenteAtivo = null;
+
+    function init() {
+        const selector = document.getElementById('tech-selector');
+        Object.keys(tecnicasData).forEach(nome => {
+            let btn = document.createElement('div');
+            btn.className = 'tech-btn';
+            btn.innerText = nome;
+            btn.onclick = () => {
+                document.querySelectorAll('.tech-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selecionada = nome;
+                document.getElementById('tech-info').style.display = 'block';
+                document.getElementById('tech-title').innerText = nome;
+                document.getElementById('tech-desc').innerText = tecnicasData[nome];
+                document.getElementById('box-dominio').style.display = 'block';
+            };
+            selector.appendChild(btn);
+        });
+        renderizar();
+    }
+
+    function showPanel(id) {
+    // 1. Esconde TODOS os painéis
+    const panels = document.querySelectorAll('.panel');
+    panels.forEach(p => {
+        p.classList.remove('active');
+    });
+
+    // 2. Remove a classe 'active' de todos os botões da nav
+    const buttons = document.querySelectorAll('nav button');
+    buttons.forEach(b => {
+        b.classList.remove('active');
+    });
+
+    // 3. Mostra o painel desejado
+    const targetPanel = document.getElementById(id);
+    if (targetPanel) {
+        targetPanel.classList.add('active');
+    }
+
+    // 4. Ativa o botão correspondente na nav
+    const targetBtn = document.getElementById('btn-' + id);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
+
+    // 5. Se for a aba de fichas ou mestre, renderiza os dados
+    if (id === 'fichas') renderizar();
+    if (id === 'mestre') renderizarMonitoramento();
+}
+
+
+    function salvar() {
+        const a = {
+            id: Date.now(),
+            nome: document.getElementById('in-nome').value,
+            grau: document.getElementById('in-grau').value,
+            tecNome: selecionada, 
+            tecDesc: tecnicasData[selecionada],
+            domNome: document.getElementById('in-dom-nome').value,
+            domDesc: document.getElementById('in-dom-desc').value,
+            attrs: { FOR: document.getElementById('in-for').value, AGI: document.getElementById('in-agi').value, VIG: document.getElementById('in-vig').value, INT: document.getElementById('in-int').value, PRE: document.getElementById('in-pre').value },
+            status: { v: 0, e: 0, d: 10 },
+            inventario: [], // NOVO
+            rituais: []    // NOVO
+        };
+        a.status.v = parseInt(a.attrs.VIG) * 5 + 10;
+        a.status.e = parseInt(a.attrs.PRE) * 4;
+        let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        db.push(a);
+        localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+        showPanel('fichas'); renderizar();
+    }
+
+    function renderizar() {
+    const grid = document.getElementById('lista-agentes');
+    const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    grid.innerHTML = db.length ? '' : '<p style="opacity:0.5; text-align:center; width:100%;">Nenhum feiticeiro na database.</p>';
+    
+    db.forEach(a => {
+        // Criamos o elemento do card
+        const card = document.createElement('div');
+        card.className = 'agente-card';
+        card.style.position = 'relative';
+        card.style.cursor = 'pointer';
+        
+        // Conteúdo do Card (O clique aqui abre a ficha)
+        card.innerHTML = `
+            <div class="card-click-area" style="width: 80%; height: 100%;">
+                <h3 style="margin:0; color:var(--accent)">${a.nome || 'Sem Nome'}</h3>
+                <small style="opacity: 0.7;">${a.tecNome || 'Técnica não definida'}</small>
+            </div>
+            <!-- Botão de Apagar (Separado pelo stopPropagation) -->
+            <button onclick="event.stopPropagation(); deletar(${a.id})" 
+                style="position: absolute; top: 15px; right: 15px; background: var(--danger); border: none; color: white; cursor: pointer; padding: 5px 12px; font-size: 0.7rem; font-weight: bold; border-radius: 2px; z-index: 100;">
+                APAGAR
+            </button>
+        `;
+        
+        // Define o evento de clique no card inteiro
+        card.onclick = function() {
+            abrirFicha(a.id);
+        };
+        
+        grid.appendChild(card);
+    });
+}
+
+
+
+    function abrirFicha(id) {
+    const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    agenteAtivo = db.find(x => x.id === id);
+    
+    if (!agenteAtivo) return;
+
+    // Preenche os dados básicos
+    document.getElementById('f-nome').innerText = agenteAtivo.nome;
+    document.getElementById('f-grau').innerText = (agenteAtivo.grau || "Grau 4").toUpperCase();
+    document.getElementById('f-tec-nome').innerText = agenteAtivo.tecNome;
+    document.getElementById('f-tec-p').innerText = agenteAtivo.tecDesc;
+    document.getElementById('f-dom-nome').innerText = agenteAtivo.domNome || "Não Despertada";
+    document.getElementById('f-dom-p').innerText = agenteAtivo.domDesc || "";
+    
+    // Atualiza os atributos no círculo
+    ['FOR', 'AGI', 'VIG', 'INT', 'PRE'].forEach(at => {
+        const val = agenteAtivo.attrs[at] || 0;
+        document.getElementById(`f-${at.toLowerCase()}`).innerText = val;
+    });
+    
+    // Renderiza o restante da ficha
+    atualizarUI();
+    renderizarPericias();
+    renderizarItens();
+
+    // Mostra a Modal
+    document.getElementById('modalFicha').style.display = 'block';
+
+    renderizarVotos(); // ADICIONE ISSO
+    document.getElementById('modalFicha').style.display = 'block';
+}
+
+    function rolarTeste(attr) {
+    let qtd = parseInt(agenteAtivo.attrs[attr]);
+    let res = [];
+    
+    if (qtd <= 0) {
+        // Regra de Atributo 0: Rola 2 dados e pega o menor
+        res.push(Math.floor(Math.random() * 20) + 1);
+        res.push(Math.floor(Math.random() * 20) + 1);
+        const pior = Math.min(...res);
+        document.getElementById('res').innerText = pior;
+        document.getElementById('res-log').innerText = `${attr} 0 (Desvantagem): [${res.join(', ')}]`;
+        document.getElementById('res').style.color = "#ff4444"; // Cor de aviso
+    } else {
+        // Regra Normal: Rola qtd de dados e pega o maior
+        for(let i=0; i<qtd; i++) res.push(Math.floor(Math.random() * 20) + 1);
+        const melhor = Math.max(...res);
+        document.getElementById('res').innerText = melhor;
+        document.getElementById('res-log').innerText = `${attr} (${qtd}d20): [${res.join(', ')}]`;
+        document.getElementById('res').style.color = (melhor === 20) ? "var(--accent)" : "white";
+    } if (melhor === 20) {
+    somCritico.play(); // Toca um som épico no 20
+    resDiv.innerHTML = `<span class="critico">${melhor + bonus}</span>`;
+    document.getElementById('res-log').innerText = "SUCESSO CRÍTICO: " + (melhor + bonus);
+}
+}
+
+
+    function editStatus(tipo) {
+        const mod = prompt("Quantidade para remover (ou use - para curar):");
+        if(!mod) return;
+        agenteAtivo.status[tipo] -= parseInt(mod);
+        atualizarUI();
+    }
+
+    function atualizarUI() {
+        const vMax = parseInt(agenteAtivo.attrs.VIG) * 5 + 10;
+        const eMax = parseInt(agenteAtivo.attrs.PRE) * 4;
+        document.getElementById('bar-v').style.width = (agenteAtivo.status.v / vMax * 100) + "%";
+        document.getElementById('txt-v').innerText = `${agenteAtivo.status.v} / ${vMax}`;
+        document.getElementById('bar-p').style.width = (agenteAtivo.status.e / eMax * 100) + "%";
+        document.getElementById('txt-e').innerText = `${agenteAtivo.status.e} / ${eMax}`;
+        document.getElementById('bar-d').style.width = (agenteAtivo.status.d / 10 * 100) + "%";
+        document.getElementById('txt-d').innerText = `${agenteAtivo.status.d} / 10`;
+    }
+
+    function fecharFicha() { document.getElementById('modalFicha').style.display = 'none'; }
+    function showPanel(id) { 
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); 
+    }
+    
+    function deletar(id) {
+    if(confirm("Tem certeza que deseja apagar este feiticeiro?")) {
+        let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        db = db.filter(x => x.id !== id);
+        localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+        renderizar(); // Atualiza a lista na tela
+    }
+}
+
+function editarTecnica(id) {
+    const novaTec = prompt("Digite o novo nome da técnica:");
+    if (novaTec) {
+        let db = JSON.parse(localStorage.getItem('jujutsu_vFinal'));
+        const index = db.findIndex(x => x.id === id);
+        db[index].tecNome = novaTec;
+        localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+        renderizar();
+    }
+}
+
+// Função para as setas controlarem os pontos
+function ajustar(tipo, valor) {
+    if (!agenteAtivo) return;
+
+    // Converte o tipo para a chave correta do objeto status
+    const statKey = tipo === 'e' ? 'e' : (tipo === 'v' ? 'v' : 'd');
+    
+    // Define os máximos
+    let max = 10;
+    if (tipo === 'v') max = parseInt(agenteAtivo.attrs.VIG) * 5 + 10;
+    if (tipo === 'e') max = parseInt(agenteAtivo.attrs.PRE) * 4;
+    if (tipo === 'd') max = 10;
+
+    // Aplica o ajuste
+    agenteAtivo.status[statKey] += valor;
+
+    // Travas de segurança
+    if (agenteAtivo.status[statKey] < 0) agenteAtivo.status[statKey] = 0;
+    if (agenteAtivo.status[statKey] > max) agenteAtivo.status[statKey] = max;
+
+    // SALVAMENTO CRÍTICO: Atualiza o banco de dados
+    atualizarDatabase(); 
+    
+    // Atualiza o visual
+    atualizarUI();
+}
+
+
+// Sistema de Itens Amaldiçoados e Rituais (Sugestão de estrutura)
+const catalogoItens = [
+    { nome: "Nuvem Brincalhona", dano: "2d10", efeito: "Soma FOR no dano" },
+    { nome: "Lâmina de Cinzas", dano: "1d12", efeito: "Causa Queimação" }
+];
+
+function adicionarItem(idItem) {
+    // Aqui você pode criar uma lógica para salvar itens no agente
+    alert("Item " + catalogoItens[idItem].nome + " vinculado ao feiticeiro!");
+}
+
+// Função para Descansar (Recupera Vida baseada em VIG e PE baseado em PRE)
+function descansar() {
+    if(!agenteAtivo) return;
+
+    const vRec = parseInt(agenteAtivo.attrs.VIG) + 5; // Recupera VIG + 5 de vida
+    const eRec = parseInt(agenteAtivo.attrs.PRE) + 2; // Recupera PRE + 2 de energia
+
+    ajustar('v', vRec);
+    ajustar('e', eRec);
+    
+    // PD (Pontos de Domínio) recuperam totalmente no descanso longo
+    agenteAtivo.status.d = 10;
+    
+    atualizarUI();
+    alert(`Descanso concluído! Recupereu ${vRec} PV e ${eRec} PE. Pontos de Domínio restaurados.`);
+}
+
+// Certifique-se de que sua função atualizarUI está usando PRE para o PE máximo
+function atualizarUI() {
+    if(!agenteAtivo) return;
+    
+    const vMax = parseInt(agenteAtivo.attrs.VIG) * 5 + 10;
+    const eMax = parseInt(agenteAtivo.attrs.PRE) * 4; // SEMPRE REFERENCIANDO A PRESENÇA
+    const dMax = 10;
+
+    // Atualiza larguras
+    document.getElementById('bar-v').style.width = (agenteAtivo.status.v / vMax * 100) + "%";
+    document.getElementById('bar-p').style.width = (agenteAtivo.status.e / eMax * 100) + "%";
+    document.getElementById('bar-d').style.width = (agenteAtivo.status.d / dMax * 100) + "%";
+
+    // Atualiza textos
+    document.getElementById('txt-v').innerText = `${agenteAtivo.status.v} / ${vMax}`;
+    document.getElementById('txt-e').innerText = `${agenteAtivo.status.e} / ${eMax}`;
+    document.getElementById('txt-d').innerText = `${agenteAtivo.status.d} / ${dMax}`;
+}
+
+let tipoInputAtual = ""; // Variável global para identificar o que estamos salvando
+
+function abrirPromptItem(tipo) {
+    tipoInputAtual = tipo;
+    
+    const painel = document.getElementById('painel-input');
+    const titulo = document.getElementById('input-titulo');
+    const labelD = document.getElementById('label-detalhe');
+
+    // Configura o título e a legenda dinamicamente
+    titulo.innerText = tipo === 'item' ? "NOVA FERRAMENTA" : "NOVO RITUAL";
+    labelD.innerText = tipo === 'item' ? "DANO/EFEITO:" : "CUSTO PE/EFEITO:";
+    
+    // Reseta os campos de texto
+    document.getElementById('input-nome-obj').value = "";
+    document.getElementById('input-detalhe-obj').value = "";
+
+    // Exibe o painel
+    painel.style.display = 'block';
+
+    // Configura o clique do botão ADICIONAR dentro do painel
+    document.getElementById('btn-confirmar-obj').onclick = function() {
+        const nome = document.getElementById('input-nome-obj').value;
+        const detalhe = document.getElementById('input-detalhe-obj').value;
+
+        if (!nome || !detalhe) {
+            alert("Por favor, preencha os campos de Nome e Detalhe.");
+            return;
+        }
+
+        const novoObj = { nome, detalhe };
+
+        // Verifica a lista correta para salvar
+        if (tipoInputAtual === 'item') {
+            if (!agenteAtivo.inventario) agenteAtivo.inventario = [];
+            agenteAtivo.inventario.push(novoObj);
+        } else {
+            if (!agenteAtivo.rituais) agenteAtivo.rituais = [];
+            agenteAtivo.rituais.push(novoObj);
+        }
+
+        atualizarDatabase();
+        renderizarItens();
+        fecharPainelInput(); // Fecha após salvar
+    };
+}
+
+// Função para o botão CANCELAR
+function fecharPainelInput() {
+    document.getElementById('painel-input').style.display = 'none';
+}
+
+
+function renderizarItens() {
+    const iContainer = document.getElementById('itens-container');
+    const rContainer = document.getElementById('rituais-container');
+    
+    iContainer.innerHTML = '';
+    rContainer.innerHTML = '';
+
+    if (agenteAtivo.inventario) {
+        agenteAtivo.inventario.forEach((item, index) => {
+            iContainer.innerHTML += `
+                <div style="background:#111; padding:8px; border:1px solid #222; margin-top:5px; font-size:0.75rem; position:relative;">
+                    <b>${item.nome}</b><br><small>${item.detalhe}</small>
+                    <span onclick="removerItem('inventario', ${index})" style="position:absolute; right:5px; top:2px; color:var(--danger); cursor:pointer;">×</span>
+                </div>`;
+        });
+    }
+
+    if (agenteAtivo.rituais) {
+        agenteAtivo.rituais.forEach((ritual, index) => {
+            rContainer.innerHTML += `
+                <div style="background:#111; padding:8px; border:1px solid #222; margin-top:5px; border-left: 2px solid var(--accent); font-size:0.75rem; position:relative;">
+                    <b>${ritual.nome}</b><br><small>${ritual.detalhe}</small>
+                    <span onclick="removerItem('rituais', ${index})" style="position:absolute; right:5px; top:2px; color:var(--danger); cursor:pointer;">×</span>
+                </div>`;
+        });
+    }
+}
+
+function removerItem(lista, index) {
+    agenteAtivo[lista].splice(index, 1);
+    atualizarDatabase();
+    renderizarItens();
+}
+
+function atualizarDatabase() {
+    let db = JSON.parse(localStorage.getItem('jujutsu_vFinal'));
+    const idx = db.findIndex(x => x.id === agenteAtivo.id);
+    db[idx] = agenteAtivo;
+    localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+}
+
+function alternarTreinamento(periciaNome) {
+    if (!agenteAtivo.bonusPericias) agenteAtivo.bonusPericias = {};
+    
+    let atual = agenteAtivo.bonusPericias[periciaNome] || 0;
+    let novoBonus = 0;
+
+    // Ciclo: 0 -> 5 (Treinado) -> 10 (Veterano) -> 15 (Expert) -> 0
+    if (atual === 0) novoBonus = 5;
+    else if (atual === 5) novoBonus = 10;
+    else if (atual === 10) novoBonus = 15;
+    else novoBonus = 0;
+
+    agenteAtivo.bonusPericias[periciaNome] = novoBonus;
+    
+    // Salva no banco de dados e atualiza a visão
+    atualizarDatabase();
+    abrirFicha(agenteAtivo.id); 
+}
+
+// Link de som de dados (substitua por um de sua preferência se quiser)
+const somDado = new Audio('dado.mp3');
+
+function rolarTeste(attr) {
+    somDado.play();
+    const resDiv = document.getElementById('res');
+    resDiv.classList.remove('critico'); // Remove brilho anterior
+    
+    let qtd = parseInt(agenteAtivo.attrs[attr]);
+    let res = [];
+    
+    if (qtd <= 0) {
+        res.push(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1);
+        const pior = Math.min(...res);
+        resDiv.innerText = pior;
+        document.getElementById('res-log').innerText = `${attr} 0 (Desvantagem): [${res.join(', ')}]`;
+        resDiv.style.color = "#ff4444";
+    } else {
+        for(let i=0; i<qtd; i++) res.push(Math.floor(Math.random() * 20) + 1);
+        const melhor = Math.max(...res);
+        resDiv.innerText = melhor;
+        document.getElementById('res-log').innerText = `${attr} (${qtd}d20): [${res.join(', ')}]`;
+        
+        // Efeito de CRÍTICO
+        if (melhor === 20) {
+            resDiv.classList.add('critico');
+            resDiv.style.color = "var(--warning)";
+        } else {
+            resDiv.style.color = "var(--accent)";
+        }
+    }
+}
+
+function renderizarPericias() {
+    const pList = document.getElementById('f-pericias');
+    pList.innerHTML = '';
+
+    Object.keys(periciasVinculadas).forEach(p => {
+        const attrRel = periciasVinculadas[p];
+        const bonus = (agenteAtivo.bonusPericias && agenteAtivo.bonusPericias[p]) ? agenteAtivo.bonusPericias[p] : 0;
+
+        pList.innerHTML += `
+            <div class="p-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <span onclick="rolarTeste('${attrRel}')" style="cursor:pointer;">
+                    ${p} <small style="opacity:0.5">(${attrRel})</small>
+                </span>
+                <b onclick="alternarTreinamento('${p}')" style="cursor:pointer; color:var(--accent)">
+                    +${bonus}
+                </b>
+            </div>`;
+    });
+}
+
+const somCritico = new Audio('https://myinstants.com'); // Som extra para crítico
+
+const votosData = {
+    "Revelação de Técnica": {
+        sacrificio: "Explicar como sua técnica funciona para o inimigo.",
+        bonus: "+5 no próximo teste de dano ou CD da técnica."
+    },
+    "Voto de Morte (Suicídio)": {
+        sacrificio: "O usuário morre após o ataque.",
+        bonus: "Dano multiplicado por 10x e acerto automático."
+    },
+    "Restrição Celestial (Física)": {
+        sacrificio: "NEX 0% (Não possui energia amaldiçoada).",
+        bonus: "FOR e AGI aumentam em +3, imune a Domínios."
+    },
+    "Hora Extra (Nanami)": {
+        sacrificio: "Energia limitada durante o horário comercial.",
+        bonus: "Dobro de PE e +5 em testes após as 18h."
+    },
+    "Sacrifício de Sentido": {
+        sacrificio: "Perder a visão ou audição permanentemente.",
+        bonus: "+10 em Percepção Paranormal e +2 em Presença."
+    }
+};
+
+function fazerVoto() {
+    // Abre um seletor simples ou prompt
+    const lista = Object.keys(votosData).join('\n');
+    const escolha = prompt("Escolha um Voto ou digite um novo:\n" + lista);
+    
+    if (!escolha) return;
+
+    let desc = "";
+    if (votosData[escolha]) {
+        desc = `Sacríficio: ${votosData[escolha].sacrificio} | Bônus: ${votosData[escolha].bonus}`;
+    } else {
+        desc = prompt("Descreva o Sacrifício e o Bônus do seu voto customizado:");
+    }
+
+    if (!agenteAtivo.votos) agenteAtivo.votos = [];
+    agenteAtivo.votos.push({ nome: escolha, detalhe: desc });
+
+    atualizarDatabase();
+    renderizarVotos();
+}
+
+function renderizarVotos() {
+    const container = document.getElementById('votos-container');
+    container.innerHTML = '';
+    
+    if (agenteAtivo.votos) {
+        agenteAtivo.votos.forEach((v, idx) => {
+            container.innerHTML += `
+                <div style="background:#111; padding:8px; border-left:2px solid var(--warning); margin-bottom:5px; font-size:0.75rem; position:relative;">
+                    <b style="color:var(--warning)">${v.nome}</b><br>
+                    <small style="opacity:0.7">${v.detalhe}</small>
+                    <span onclick="quebrarVoto(${idx})" style="position:absolute; right:5px; top:2px; color:var(--danger); cursor:pointer; font-size:1rem;">×</span>
+                </div>`;
+        });
+    }
+}
+
+function quebrarVoto(idx) {
+    if(confirm("Quebrar um voto gera uma penalidade terrível. Deseja continuar?")) {
+        agenteAtivo.votos.splice(idx, 1);
+        atualizarDatabase();
+        renderizarVotos();
+        alert("O Voto foi quebrado. O Mestre decidirá sua punição amaldiçoada.");
+    }
+}
+
+function abrirModoMestre() {
+    showPanel('mestre');
+    renderizarMonitoramento();
+}
+
+function renderizarMonitoramento() {
+    const grid = document.getElementById('grid-mestre');
+    const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    grid.innerHTML = db.length ? '' : '<p style="opacity:0.5;">Nenhum feiticeiro registrado para monitoramento.</p>';
+
+    db.forEach((agente, index) => {
+        const vM = parseInt(agente.attrs.VIG) * 5 + 10;
+        const eM = parseInt(agente.attrs.PRE) * 4;
+        const dM = 10;
+
+        grid.innerHTML += `
+            <div style="background: var(--panel); border: 1px solid #222; padding: 15px; border-top: 3px solid var(--accent);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                    <strong style="color: var(--accent); text-transform: uppercase;">${agente.nome}</strong>
+                    <small style="opacity: 0.5;">NEX: ${agente.grau}</small>
+                </div>
+
+                <!-- VIDA RÁPIDA -->
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.6rem;"><span>VIDA</span> <span>${agente.status.v}/${vM}</span></div>
+                    <div style="background:#000; height:8px; border:1px solid #333; margin-top:2px;">
+                        <div style="background:var(--danger); height:100%; width: ${(agente.status.v/vM*100)}%;"></div>
+                    </div>
+                </div>
+
+                <!-- ENERGIA RÁPIDA -->
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.6rem;"><span>ENERGIA (PE)</span> <span>${agente.status.e}/${eM}</span></div>
+                    <div style="background:#000; height:8px; border:1px solid #333; margin-top:2px;">
+                        <div style="background:var(--accent); height:100%; width: ${(agente.status.e/eM*100)}%;"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 5px; margin-top: 15px;">
+                    <button onclick="ajustarMestre(${agente.id}, 'v', -5)" style="flex:1; background:none; border:1px solid var(--danger); color:var(--danger); font-size:0.6rem; cursor:pointer;">-5 PV</button>
+                    <button onclick="ajustarMestre(${agente.id}, 'e', -1)" style="flex:1; background:none; border:1px solid var(--accent); color:var(--accent); font-size:0.6rem; cursor:pointer;">-1 PE</button>
+                    <button onclick="abrirFicha(${agente.id})" style="flex:1.5; background:var(--accent); border:none; color:#000; font-size:0.6rem; font-weight:bold; cursor:pointer;">ABRIR FICHA</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Função para o mestre editar status diretamente do painel
+function ajustarMestre(id, tipo, valor) {
+    let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    const index = db.findIndex(x => x.id === id);
+    if(index === -1) return;
+
+    let ag = db[index];
+    ag.status[tipo] += valor;
+
+    // Travas de segurança
+    const vMax = parseInt(ag.attrs.VIG) * 5 + 10;
+    const eMax = parseInt(ag.attrs.PRE) * 4;
+    const dMax = 10;
+
+    if (ag.status.v < 0) ag.status.v = 0; if (ag.status.v > vMax) ag.status.v = vMax;
+    if (ag.status.e < 0) ag.status.e = 0; if (ag.status.e > eMax) ag.status.e = eMax;
+
+    db[index] = ag;
+    localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+    renderizarMonitoramento(); // Atualiza a tela do mestre
+}
+
+function gerarIniciativa() {
+    let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    if (db.length === 0) return alert("Nenhum agente registrado para o combate!");
+
+    db.forEach(agente => {
+        const agilidade = parseInt(agente.attrs.AGI);
+        // Rola d20 + Agilidade (Regra padrão Ordem)
+        const d20 = Math.floor(Math.random() * 20) + 1;
+        agente.iniciativaAtual = d20 + agilidade;
+    });
+
+    // Ordena do maior para o menor
+    db.sort((a, b) => b.iniciativaAtual - a.iniciativaAtual);
+
+    localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+    renderizarMonitoramento();
+    alert("Iniciativa gerada! A ordem dos turnos foi atualizada.");
+}
+
+function limparIniciativa() {
+    let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+    db.forEach(agente => agente.iniciativaAtual = null);
+    localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+    renderizarMonitoramento();
+}
+
+const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+if(document.getElementById('count-agentes')) {
+    document.getElementById('count-agentes').innerText = db.length;
+}
+
+function toggleMusica() {
+    const music = document.getElementById('bg-music');
+    const status = document.getElementById('music-status');
+    
+    if (music.paused) {
+        music.play();
+        music.volume = 0.3; // Volume baixo para não atrapalhar a fala
+        status.innerText = "ON - REPRODUZINDO FREQUÊNCIA AMALDIÇOADA";
+        status.style.color = "var(--accent)";
+    } else {
+        music.pause();
+        status.innerText = "OFF";
+        status.style.color = "var(--danger)";
+    }
+}
+
+// Link para um som de alerta de radar/alarme sombrio
+const somAlerta = new Audio('alerta.mp3');
+
+function verificarVidaCritica(agente) {
+    const vMax = parseInt(agente.attrs.VIG) * 5 + 10;
+    
+    // Dispara o alerta se a vida estiver abaixo de 20% (ajustável)
+    if (agente.status.v > 0 && agente.status.v <= (vMax * 0.2)) {
+        somAlerta.volume = 0.5;
+        somAlerta.play();
+        
+        // Se estiver no Modo Mestre, faz o card do agente piscar
+        const cardMestre = document.querySelector(`[onclick*="ajustarMestre(${agente.id}"]`);
+        if(cardMestre) {
+            cardMestre.parentElement.style.animation = "alarmeCritico 0.5s infinite alternate";
+        }
+    }
+}
+
+// ATUALIZAÇÃO IMPORTANTE: 
+// Chame verificarVidaCritica(agenteAtivo) dentro da sua função atualizarDatabase()
+function atualizarDatabase() {
+    let db = JSON.parse(localStorage.getItem('jujutsu_vFinal'));
+    const idx = db.findIndex(x => x.id === agenteAtivo.id);
+    db[idx] = agenteAtivo;
+    localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+    
+    // Verifica se o agente atual entrou em estado crítico
+    verificarVidaCritica(agenteAtivo);
+}
+
+
+    init();
+</script>
+
+<div id="painel-input" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--panel); border:2px solid var(--accent); padding:20px; z-index:3000; width:300px; box-shadow: 0 0 50px #000;">
+    <h3 id="input-titulo" style="margin-top:0; color:var(--accent); font-size:0.9rem;">ADICIONAR</h3>
+    <label style="font-size:0.7rem;">NOME:</label>
+    <input type="text" id="input-nome-obj" style="margin-bottom:10px;">
+    <label id="label-detalhe" style="font-size:0.7rem;">DETALHE:</label>
+    <input type="text" id="input-detalhe-obj">
+    
+    <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn-acao" id="btn-confirmar-obj" style="padding:10px;">ADICIONAR</button>
+        <button onclick="fecharPainelInput()" style="background:none; border:1px solid var(--danger); color:var(--danger); cursor:pointer; flex:1;">CANCELAR</button>
+    </div>
+</div>
+
+</body>
+</html>
