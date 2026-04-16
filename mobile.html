@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>S.I.J. - Terminal Mobile</title>
+    <style>
+        :root {
+            --bg: #050505; --panel: #0a0a0a; --accent: #00f2ff;
+            --danger: #ff0033; --warning: #ffaa00; --text: #ffffff; --border: #1a1a1a;
+        }
+
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+
+        /* NAVEGAÇÃO MOBILE */
+        nav { 
+            display: flex; justify-content: center; background: #000; flex-wrap: wrap;
+            border-bottom: 2px solid var(--danger); position: sticky; top: 0; z-index: 1000;
+        }
+        nav button { 
+            background: transparent; border: none; color: #888; padding: 12px 10px; 
+            cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.7rem;
+        }
+        nav button.active { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+
+        .container { max-width: 1200px; margin: 10px auto; padding: 0 15px; position: relative; min-height: 80vh; }
+        /* Ajuste para que os painéis não ocupem espaço quando escondidos */
+        .panel { 
+            display: none; 
+            width: 100%; 
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Painel ativo força o layout correto e reseta o scroll */
+        .panel.active { 
+            display: block; 
+            opacity: 1;
+        }
+
+        /* A Home precisa ser Flex para manter a logo centralizada, mas apenas quando ativa */
+        #home.active { 
+            display: flex !important; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* RECRUTAMENTO RESPONSIVO */
+        .form-box { background: var(--panel); border: 1px solid var(--border); padding: 20px; display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media(min-width: 768px) { .form-box { grid-template-columns: 1fr 1fr; } .full { grid-column: span 2; } }
+        
+        label { color: var(--accent); font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        input, select, textarea { width: 100%; background: #111; border: 1px solid #333; color: white; padding: 15px; box-sizing: border-box; font-size: 16px; }
+        
+        .attr-row { display: flex; justify-content: space-between; background: #000; padding: 15px; border: 1px solid var(--danger); gap: 5px; }
+        .attr-in { text-align: center; flex: 1; }
+        .attr-in input { width: 100%; text-align: center; font-size: 1.2rem; color: var(--danger); background: transparent; border: 1px solid var(--danger); padding: 5px; }
+
+        /* TÉCNICAS GRID */
+        .tech-selector {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 8px; max-height: 250px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid #222;
+        }
+        .tech-btn { font-size: 0.7rem; padding: 10px; background: #111; border: 1px solid #333; color: #888; text-transform: uppercase; text-align: center; }
+        .tech-btn.selected { background: var(--accent); color: #000; font-weight: bold; border-color: #fff; }
+        .tech-info-panel { background: rgba(0, 242, 255, 0.05); border-left: 4px solid var(--accent); padding: 15px; margin-top: 10px; display: none; }
+
+        /* CARDS E MODAL */
+        .agentes-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media(min-width: 600px) { .agentes-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+        
+        .agente-card { background: var(--panel); border: 1px solid var(--border); padding: 20px; border-left: 4px solid var(--accent); cursor: pointer; }
+        .modal-full { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; overflow-y: auto; padding: 15px; box-sizing: border-box; }
+        .ficha-layout { display: flex; flex-direction: column; gap: 20px; }
+        @media(min-width: 1024px) { .ficha-layout { display: grid; grid-template-columns: 320px 1fr 280px; } }
+
+        /* ATRIBUTOS MOBILE */
+        .attr-circle { width: 220px; height: 220px; border: 2px dashed #333; border-radius: 50%; position: relative; margin: 40px auto; display: flex; align-items: center; justify-content: center; transform: scale(0.9); }
+        .attr-node { position: absolute; width: 50px; height: 50px; background: #000; border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; }
+        .n-for { top: -25px; } .n-agi { top: 40px; right: -25px; } .n-int { bottom: 40px; right: -25px; } .n-pre { bottom: 40px; left: -25px; } .n-vig { top: 40px; left: -25px; }
+
+        /* BARRAS */
+        .bar-wrap { background: #111; height: 25px; border: 1px solid #333; position: relative; overflow: hidden; flex-grow: 1; }
+        .bar-fill { position: absolute; height: 100%; transition: 0.3s; z-index: 1; }
+        .bar-label { position: absolute; width: 100%; text-align: center; line-height: 25px; font-weight: bold; font-size: 0.75rem; z-index: 2; }
+
+        /* PERÍCIAS */
+        .pericia-list { background: #0a0a0a; border: 1px solid #222; padding: 10px; font-size: 0.8rem; max-height: 300px; overflow-y: auto; }
+        .p-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1a1a1a; align-items: center; }
+
+        .logo-sij { font-size: clamp(3rem, 15vw, 8rem); text-align: center; margin: 0; letter-spacing: 10px; }
+        .status-box { margin-top: 30px; border: 1px solid rgba(0, 242, 255, 0.3); padding: 15px; background: rgba(0,0,0,0.5); font-size: 0.65rem; color: var(--accent); display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+        
+        .btn-acao { background: var(--accent); color: #000; padding: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; margin-top: 10px; }
+        .btn-fechar { background: var(--danger); border: none; color: #fff; padding: 10px 20px; cursor: pointer; float: right; margin-bottom: 10px; }
+        .mobile-version .logo-sij {
+    font-size: 3rem; /* Tamanho específico para quando o JS detectar mobile */
+}
+
+    </style>
+</head>
+<body>
+
+<nav>
+    <button onclick="showPanel('home')" id="btn-home" class="active">Terminal</button>
+    <button onclick="showPanel('fichas')" id="btn-fichas">Agentes</button>
+    <button onclick="showPanel('novo')" id="btn-novo">+ Novo</button>
+    <button onclick="abrirModoMestre()" id="btn-mestre">Mestre</button>
+</nav>
+
+<div class="container">
+    <!-- HOME -->
+    <div id="home" class="panel active" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 70vh;">
+        <h1 class="logo-sij">S.I.J.</h1>
+        <p style="color:var(--accent); letter-spacing:5px; text-transform: uppercase; font-size: 0.7rem;">Terminal de Feiticeiros</p>
+        <div class="status-box">
+            <span>STATUS: ONLINE</span>
+            <span>AGENTES CONECTADOS: <span id="count-agentes">0</span></span>
+            <div class="music-trigger" onclick="toggleMusica()" style="border:1px solid var(--danger); padding:5px 10px; cursor:pointer;">
+                AUDIO: <span id="music-status">OFF</span>
+            </div>
+        </div>
+        <audio id="bg-music" loop src=""></audio>
+    </div>
+
+    <!-- LISTA -->
+    <div id="fichas" class="panel">
+        <div id="lista-agentes" class="agentes-grid"></div>
+    </div>
+
+    <!-- MESTRE -->
+    <div id="mestre" class="panel">
+        <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="gerarIniciativa()" class="btn-acao" style="background:var(--warning); margin:0;">🎲 Rolar Iniciativa Global</button>
+            <button onclick="limparIniciativa()" style="background:none; border:1px solid #444; color:#888; padding:10px; cursor:pointer;">Limpar Ordem</button>
+        </div>
+        <div id="grid-mestre" class="agentes-grid"></div>
+    </div>
+
+    <!-- RECRUTAR -->
+    <div id="novo" class="panel">
+        <div class="form-box">
+            <h2 style="color: var(--accent); margin:0;">NOVO REGISTRO</h2>
+            <div><label>Nome</label><input type="text" id="in-nome"></div>
+            <div><label>Grau</label><select id="in-grau"><option>Grau 4</option><option>Grau 3</option><option>Grau 2</option><option>Grau 1</option><option>Grau Especial</option></select></div>
+            <div class="full">
+                <div class="attr-row">
+                    <div class="attr-in"><label>FOR</label><input type="number" id="in-for" value="1"></div>
+                    <div class="attr-in"><label>AGI</label><input type="number" id="in-agi" value="1"></div>
+                    <div class="attr-in"><label>VIG</label><input type="number" id="in-vig" value="1"></div>
+                    <div class="attr-in"><label>INT</label><input type="number" id="in-int" value="1"></div>
+                    <div class="attr-in"><label>PRE</label><input type="number" id="in-pre" value="1"></div>
+                </div>
+            </div>
+            <div class="full">
+                <label>Técnica</label>
+                <div class="tech-selector" id="tech-selector"></div>
+                <div id="tech-info" class="tech-info-panel"><h4 id="tech-title" style="margin:0"></h4><p id="tech-desc" style="font-size:0.8rem;"></p></div>
+            </div>
+            <div class="full" id="box-dominio" style="display:none;">
+                <label>Expansão de Domínio</label>
+                <input type="text" id="in-dom-nome" placeholder="Nome do Domínio">
+                <textarea id="in-dom-desc" placeholder="Descrição do Domínio..." style="margin-top:10px;"></textarea>
+            </div>
+            <button class="btn-acao full" onclick="salvar()">REGISTRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FICHA -->
+<div id="modalFicha" class="modal-full">
+    <button class="btn-fechar" onclick="fecharFicha()">FECHAR</button>
+    <div class="ficha-layout">
+        <div>
+            <div class="attr-circle">
+                <div class="attr-node n-for" onclick="rolarTeste('FOR')">FOR<br><b id="f-for"></b></div>
+                <div class="attr-node n-agi" onclick="rolarTeste('AGI')">AGI<br><b id="f-agi"></b></div>
+                <div class="attr-node n-int" onclick="rolarTeste('INT')">INT<br><b id="f-int"></b></div>
+                <div class="attr-node n-pre" onclick="rolarTeste('PRE')">PRE<br><b id="f-pre"></b></div>
+                <div class="attr-node n-vig" onclick="rolarTeste('VIG')">VIG<br><b id="f-vig"></b></div>
+            </div>
+            <!-- BARRAS -->
+            <div style="margin-top:20px;">
+                <!-- VIDA -->
+                <label>Vida</label>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
+                    <button onclick="ajustar('v',-1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--danger); font-weight:bold;">-</button>
+                    <div class="bar-wrap"><div id="bar-v" class="bar-fill" style="background:var(--danger)"></div><div class="bar-label" id="txt-v"></div></div>
+                    <button onclick="ajustar('v',1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--danger); font-weight:bold;">+</button>
+                </div>
+
+                <!-- ENERGIA -->
+                <label>Energia (PE)</label>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
+                    <button onclick="ajustar('e',-1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--accent); font-weight:bold;">-</button>
+                    <div class="bar-wrap"><div id="bar-p" class="bar-fill" style="background:var(--accent)"></div><div class="bar-label" id="txt-e"></div></div>
+                    <button onclick="ajustar('e',1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--accent); font-weight:bold;">+</button>
+                </div>
+
+                <!-- PONTOS DE DOMÍNIO (Reintegrado) -->
+                <label>Pontos de Domínio (PD)</label>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
+                    <button onclick="ajustar('d',-1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--warning); font-weight:bold;">-</button>
+                    <div class="bar-wrap"><div id="bar-d" class="bar-fill" style="background:var(--warning)"></div><div class="bar-label" id="txt-d"></div></div>
+                    <button onclick="ajustar('d',1)" style="width:45px; height:35px; background:#111; color:#fff; border:1px solid var(--warning); font-weight:bold;">+</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div>
+            <h1 id="f-nome" style="color:var(--accent); margin:0; font-size: 1.5rem;"></h1>
+            <p id="f-grau" style="opacity:0.5; font-size: 0.8rem;"></p>
+            <div style="background:#0a0a0a; padding:15px; border:1px solid #222; margin-bottom:15px;">
+                <strong id="f-tec-nome"></strong><p id="f-tec-p" style="font-size:0.8rem; opacity:0.7"></p>
+                <hr style="border:0; border-top:1px solid #333;">
+                <strong style="color:var(--danger)">DOMÍNIO: </strong><span id="f-dom-nome"></span>
+                <p id="f-dom-p" style="font-size:0.75rem; font-style:italic; opacity:0.6"></p>
+            </div>
+            <h3 style="color:var(--accent); border-bottom:1px solid #222; font-size: 0.9rem;">PERÍCIAS</h3>
+            <div class="pericia-list" id="f-pericias"></div>
+        </div>
+
+        <div>
+            <div style="background:#111; padding:15px; border:1px solid var(--accent); text-align:center;">
+                <label>RESULTADO</label>
+                <div id="res" style="font-size:4rem; color:var(--accent);">--</div>
+                <div id="res-log" style="font-size:0.7rem; opacity:0.5"></div>
+            </div>
+            <div style="background:#0a0a0a; border:1px solid var(--warning); padding:10px; margin-top:15px;">
+                <h4 style="color:var(--warning); margin:0 0 10px 0; font-size:0.8rem;">VOTOS VINCULANTES</h4>
+                <div id="votos-container"></div>
+                <button onclick="fazerVoto()" style="width:100%; background:none; border:1px dashed var(--warning); color:var(--warning); padding:5px; font-size:0.7rem;">+ NOVO VOTO</button>
+            </div>
+            <button onclick="descansar()" class="btn-acao" style="background:#004422; color:#fff; border:1px solid #00ff88;">🛏️ DESCANSAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- PAINEL DE INPUT (FIXO PARA MOBILE) -->
+<div id="painel-input" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+    <div style="background:var(--panel); border:1px solid var(--accent); padding:20px; width:100%; max-width:400px;">
+        <h3 id="input-titulo" style="color:var(--accent); margin:0 0 15px 0;"></h3>
+        <label id="label-detalhe"></label>
+        <input type="text" id="input-nome-obj" placeholder="Nome" style="margin-bottom:10px;">
+        <textarea id="input-detalhe-obj" placeholder="Detalhes" style="height:80px;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="btn-acao" id="btn-confirmar-obj" style="margin:0;">SALVAR</button>
+            <button onclick="fecharPainelInput()" style="background:#222; color:#fff; border:none; padding:10px; flex:1;">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tecnicasData = {
+        "Infinito": "Manipula o espaço a nível atômico. Concede Defesa absoluta e controle gravitacional (Custo: 5 PE/rodada).",
+        "Manipulação de Cortas": "Manipula as cordas que se criam ao tocar em seu inimigo, podendo copiar suas habilidades inatas (Custo: 3 PE/rodada).",
+        "Dez Sombras": "Invoca até 10 shikigamis através de sombras. Inclui o ritual de dominação de Mahoraga.",
+        "Fala Amaldiçoada": "Comanda a realidade com palavras. Alvos sofrem efeitos imediatos, mas usuário recebe dano de recuo.",
+        "Relação de Proporção": "Divide o alvo na proporção 7:3 para criar um ponto fraco crítico (Crítico 18-20).",
+        "Manipulação de Sangue": "Técnica do Clã Kamo. Permite criar projéteis, endurecer o corpo ou controlar temperatura sanguínea.",
+        "Construção": "Materializa objetos físicos do nada. Consome PE massivo para objetos permanentes.",
+        "Bonecos Amaldiçoados": "Cria corpos artificiais com núcleos de alma independentes.",
+        "Composição de Projeção": "Transforma 1 segundo em 24 quadros de animação. Quem quebra a regra fica paralisado.",
+        "Clivagem e Desmantelar": "Cortes invisíveis de Sukuna. A Clivagem se ajusta à resistência e o Desmantelar corta objetos.",
+        "Manipulação de Espíritos": "Absorve maldições derrotadas para usá-las como servos.",
+        "Transfiguração Ociosa": "Muda a forma da alma ao toque. Pode curar o usuário ou deformar inimigos.",
+        "Desastre das Chamas": "Poder vulcânico de Jogo. Gera calor extremo e disparos de magma (4d10 dano).",
+        "Desastre das Plantas": "Controla a flora amaldiçoada. Pode drenar energia amaldiçoada (PE).",
+        "Desastre das Marés": "Manipula massas de água e invoca shikigamis marinhos.",
+        "Técnica de Comédia": "Torna real qualquer coisa que o usuário ache engraçada.",
+        "Julgamento": "Invoca o Shikigami 'Judgeman'. Pode proibir o uso de técnicas ou armas.",
+        "Céu Estrelado": "Aplica conceitos de distância astronômica a alvos marcados.",
+        "Cópia": "Permite copiar técnicas de outros feiticeiros após consumir uma parte deles.",
+        "Domínio Simples": "Anula a garantia de acerto de qualquer Expansão de Domínio.",
+        "Amplificação de Domínio": "Cria uma camada para neutralizar técnicas inatas inimigas."
+    };
+
+    const periciasVinculadas = {
+        "Acrobacia": "AGI", "Atletismo": "FOR", "Crime": "AGI", "Diplomacia": "PRE",
+        "Fortitude": "VIG", "Furtividade": "AGI", "Iniciativa": "AGI", "Intimidação": "PRE",
+        "Investigação": "INT", "Luta": "FOR", "Ocultismo": "INT", "Percepção": "PRE",
+        "Pontaria": "AGI", "Reflexos": "AGI", "Vontade": "PRE"
+    };
+
+    let selecionada = "", agenteAtivo = null;
+
+    function init() {
+        const selector = document.getElementById('tech-selector');
+        Object.keys(tecnicasData).forEach(nome => {
+            let btn = document.createElement('div');
+            btn.className = 'tech-btn';
+            btn.innerText = nome;
+            btn.onclick = () => {
+                document.querySelectorAll('.tech-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selecionada = nome;
+                document.getElementById('tech-info').style.display = 'block';
+                document.getElementById('tech-title').innerText = nome;
+                document.getElementById('tech-desc').innerText = tecnicasData[nome];
+                document.getElementById('box-dominio').style.display = 'block';
+            };
+            selector.appendChild(btn);
+        });
+        renderizar();
+    }
+
+    function showPanel(id) {
+    // 1. Esconde todos os painéis e remove a classe ativa dos botões
+    const panels = document.querySelectorAll('.panel');
+    const buttons = document.querySelectorAll('nav button');
+    
+    panels.forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none'; // Força o desaparecimento completo
+    });
+    
+    buttons.forEach(b => b.classList.remove('active'));
+
+    // 2. Localiza e ativa o painel desejado
+    const targetPanel = document.getElementById(id);
+    const targetBtn = document.getElementById('btn-' + id);
+
+    if (targetPanel) {
+        targetPanel.classList.add('active');
+        // Aplica o display correto baseado no tipo de tela
+        if (id === 'home') {
+            targetPanel.style.display = 'flex';
+        } else {
+            targetPanel.style.display = 'block';
+        }
+    }
+
+    if (targetBtn) targetBtn.classList.add('active');
+
+    // 3. Funções de carregamento de dados
+    if (id === 'fichas') renderizar();
+    if (id === 'mestre') renderizarMonitoramento();
+
+    // 4. FIX MOBILE: Reseta o scroll para o topo ao trocar de tela
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+    function salvar() {
+        const nome = document.getElementById('in-nome').value;
+        if(!nome) return alert("Insira um nome!");
+        const a = {
+            id: Date.now(),
+            nome: nome,
+            grau: document.getElementById('in-grau').value,
+            tecNome: selecionada, 
+            tecDesc: tecnicasData[selecionada],
+            domNome: document.getElementById('in-dom-nome').value,
+            domDesc: document.getElementById('in-dom-desc').value,
+            attrs: { FOR: document.getElementById('in-for').value, AGI: document.getElementById('in-agi').value, VIG: document.getElementById('in-vig').value, INT: document.getElementById('in-int').value, PRE: document.getElementById('in-pre').value },
+            status: { v: 0, e: 0, d: 10 },
+            votos: [], bonusPericias: {}
+        };
+        a.status.v = parseInt(a.attrs.VIG) * 5 + 10;
+        a.status.e = parseInt(a.attrs.PRE) * 4;
+        let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        db.push(a);
+        localStorage.setItem('jujutsu_vFinal', JSON.stringify(db));
+        showPanel('fichas');
+    }
+
+    function renderizar() {
+        const grid = document.getElementById('lista-agentes');
+        const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        grid.innerHTML = db.length ? '' : '<p style="opacity:0.5; text-align:center; width:100%;">Vazio.</p>';
+        db.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'agente-card';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div onclick="abrirFicha(${a.id})" style="flex-grow:1;">
+                        <h3 style="margin:0; color:var(--accent); font-size:1rem;">${a.nome}</h3>
+                        <small style="opacity:0.7;">${a.tecNome || 'Sem Técnica'}</small>
+                    </div>
+                    <button onclick="deletar(${a.id})" style="background:var(--danger); border:none; color:#fff; padding:8px 12px; border-radius:4px; font-weight:bold;">X</button>
+                </div>`;
+            grid.appendChild(card);
+        });
+        if(document.getElementById('count-agentes')) document.getElementById('count-agentes').innerText = db.length;
+    }
+
+    function abrirFicha(id) {
+        const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        agenteAtivo = db.find(x => x.id === id);
+        if (!agenteAtivo) return;
+
+        document.getElementById('f-nome').innerText = agenteAtivo.nome;
+        document.getElementById('f-grau').innerText = (agenteAtivo.grau || "Grau 4").toUpperCase();
+        document.getElementById('f-tec-nome').innerText = agenteAtivo.tecNome;
+        document.getElementById('f-tec-p').innerText = agenteAtivo.tecDesc;
+        document.getElementById('f-dom-nome').innerText = agenteAtivo.domNome || "Não Despertada";
+        document.getElementById('f-dom-p').innerText = agenteAtivo.domDesc || "";
+        
+        ['FOR', 'AGI', 'VIG', 'INT', 'PRE'].forEach(at => {
+            document.getElementById(`f-${at.toLowerCase()}`).innerText = agenteAtivo.attrs[at];
+        });
+        
+        atualizarUI();
+        renderizarPericias();
+        renderizarVotos();
+        document.getElementById('modalFicha').style.display = 'block';
+    }
+
+    function rolarTeste(attr, bonus = 0, nomeP = "") {
+        let qtd = parseInt(agenteAtivo.attrs[attr]);
+        let res = [];
+        const resDiv = document.getElementById('res');
+        resDiv.style.animation = "none";
+
+        if (qtd <= 0) {
+            res.push(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1);
+            const pior = Math.min(...res);
+            resDiv.innerText = pior + bonus;
+            document.getElementById('res-log').innerText = `${nomeP || attr} (Desv.): [${res.join(', ')}] + ${bonus}`;
+        } else {
+            for(let i=0; i<qtd; i++) res.push(Math.floor(Math.random() * 20) + 1);
+            const melhor = Math.max(...res);
+            resDiv.innerText = melhor + bonus;
+            document.getElementById('res-log').innerText = `${nomeP || attr} (${qtd}d20): [${res.join(', ')}] + ${bonus}`;
+            if(melhor === 20) resDiv.style.animation = "alarmeCritico 0.5s infinite alternate";
+        }
+    }
+
+    function ajustar(tipo, valor) {
+    if (!agenteAtivo) return;
+    
+    let statKey = '';
+    let max = 0;
+
+    if (tipo === 'v') {
+        statKey = 'v';
+        max = parseInt(agenteAtivo.attrs.VIG) * 5 + 10;
+    } else if (tipo === 'e') {
+        statKey = 'e';
+        max = parseInt(agenteAtivo.attrs.PRE) * 4;
+    } else if (tipo === 'd') {
+        statKey = 'd';
+        max = 10; // Máximo fixo de PD
+    }
+
+    agenteAtivo.status[statKey] += valor;
+
+    // Travas de segurança
+    if (agenteAtivo.status[statKey] < 0) agenteAtivo.status[statKey] = 0;
+    if (agenteAtivo.status[statKey] > max) agenteAtivo.status[statKey] = max;
+
+    atualizarDatabase(); 
+    atualizarUI();
+}
+
+function atualizarUI() {
+    if(!agenteAtivo) return;
+    
+    const vMax = parseInt(agenteAtivo.attrs.VIG) * 5 + 10;
+    const eMax = parseInt(agenteAtivo.attrs.PRE) * 4;
+    const dMax = 10;
+
+    // Atualiza as barras visualmente
+    document.getElementById('bar-v').style.width = (agenteAtivo.status.v / vMax * 100) + "%";
+    document.getElementById('bar-p').style.width = (agenteAtivo.status.e / eMax * 100) + "%";
+    document.getElementById('bar-d').style.width = (agenteAtivo.status.d / dMax * 100) + "%";
+
+    // Atualiza os textos
+    document.getElementById('txt-v').innerText = `${agenteAtivo.status.v} / ${vMax}`;
+    document.getElementById('txt-e').innerText = `${agenteAtivo.status.e} / ${eMax}`;
+    document.getElementById('txt-d').innerText = `${agenteAtivo.status.d} / ${dMax}`;
+}
+
+
+    function renderizarPericias() {
+        const pList = document.getElementById('f-pericias');
+        pList.innerHTML = '';
+        Object.keys(periciasVinculadas).forEach(p => {
+            const attr = periciasVinculadas[p];
+            const bonus = (agenteAtivo.bonusPericias && agenteAtivo.bonusPericias[p]) ? agenteAtivo.bonusPericias[p] : 0;
+            pList.innerHTML += `
+                <div class="p-item">
+                    <span onclick="rolarTeste('${attr}', ${bonus}, '${p}')" style="flex:1">${p} (${attr})</span>
+                    <b onclick="alternarTreinamento('${p}')" style="color:var(--accent); padding:5px 10px;">+${bonus}</b>
+                </div>`;
+        });
+    }
+
+    function alternarTreinamento(p) {
+        if(!agenteAtivo.bonusPericias) agenteAtivo.bonusPericias = {};
+        let b = agenteAtivo.bonusPericias[p] || 0;
+        agenteAtivo.bonusPericias[p] = b >= 15 ? 0 : b + 5;
+        atualizarDatabase();
+        renderizarPericias();
+    }
+
+    function renderizarVotos() {
+        const container = document.getElementById('votos-container');
+        container.innerHTML = '';
+        if (agenteAtivo.votos) {
+            agenteAtivo.votos.forEach((v, idx) => {
+                container.innerHTML += `
+                    <div style="background:#111; padding:8px; border-left:2px solid var(--warning); margin-bottom:5px; font-size:0.75rem; position:relative;">
+                        <b style="color:var(--warning)">${v.nome}</b><br><small>${v.detalhe}</small>
+                        <span onclick="quebrarVoto(${idx})" style="position:absolute; right:5px; top:2px; color:var(--danger);">×</span>
+                    </div>`;
+            });
+        }
+    }
+
+    function fazerVoto() {
+        const nome = prompt("Nome do Voto:");
+        const det = prompt("Sacrifício/Bônus:");
+        if(nome && det) {
+            if(!agenteAtivo.votos) agenteAtivo.votos = [];
+            agenteAtivo.votos.push({nome, detalhe: det});
+            atualizarDatabase();
+            renderizarVotos();
+        }
+    }
+
+    function quebrarVoto(idx) {
+        if(confirm("Quebrar voto gera punição! Continuar?")) {
+            agenteAtivo.votos.splice(idx, 1);
+            atualizarDatabase();
+            renderizarVotos();
+        }
+    }
+
+    function renderizarMonitoramento() {
+        const grid = document.getElementById('grid-mestre');
+        const db = JSON.parse(localStorage.getItem('jujutsu_vFinal')) || [];
+        grid.innerHTML = db.length ? '' : '<p style="text-align:center; width:100%;">Vazio.</p>';
+        db.forEach(ag => {
+            const vM = parseInt(ag.attrs.VIG) * 5 + 10;
+            grid.innerHTML += `
+                <div class="agente-card" style="border-top:3px solid var(--accent)">
+                    <strong>${ag.nome}</strong> [${ag.grau}]
+                    <div style="background:#000; height:8px; border:1px solid #333; margin:10px 0;">
+                        <div style="background:var(--danger); height:100%; width:${(ag.status.v/vM*100)}%"></div>
+                    </div>
+                    <button onclick="abrirFicha(${ag.id})" style="width:100%; background:var(--accent); border:none; padding:8px; font-weight:bold;">ABRIR</button>
+                </div>`;
+        });
+    }
+
+    // Detecta se o usuário está em um dispositivo móvel
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// Exemplo de uso imediato
+if (isMobile) {
+    console.log("Terminal rodando em modo Mobile");
+    // Você pode disparar funções específicas aqui
+} else {
+    console.log("Terminal rodando em modo Desktop");
+}
+
+if (isMobile) {
+    document.body.classList.add('mobile-version');
+}
+
+
+    function deletar(id) { if(confirm("Apagar feiticeiro?")) { let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')).filter(x => x.id !== id); localStorage.setItem('jujutsu_vFinal', JSON.stringify(db)); renderizar(); } }
+    function fecharFicha() { document.getElementById('modalFicha').style.display = 'none'; }
+    function descansar() { agenteAtivo.status.v = parseInt(agenteAtivo.attrs.VIG)*5+10; agenteAtivo.status.e = parseInt(agenteAtivo.attrs.PRE)*4; atualizarDatabase(); atualizarUI(); alert("Descansado!"); }
+    function atualizarDatabase() { let db = JSON.parse(localStorage.getItem('jujutsu_vFinal')); const idx = db.findIndex(x => x.id === agenteAtivo.id); db[idx] = agenteAtivo; localStorage.setItem('jujutsu_vFinal', JSON.stringify(db)); }
+    function toggleMusica() { const m = document.getElementById('bg-music'); const s = document.getElementById('music-status'); if(m.paused){ m.play(); s.innerText="ON"; }else{ m.pause(); s.innerText="OFF"; } }
+    
+    init();
+</script>
+</body>
+</html>
